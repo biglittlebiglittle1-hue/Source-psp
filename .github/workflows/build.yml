@@ -1,43 +1,50 @@
-
 name: Build PSP Game
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
+
+env:
+PSPDEV: /usr/local/pspdev
+PATH: /usr/local/pspdev/bin:/usr/local/pspdev/psp/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+build:
+runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git cmake make build-essential
-
-      - name: Install PSPDEV
-        run: |
-          git clone https://github.com/pspdev/pspdev.git
-          cd pspdev
-          ./prepare.sh
-          sudo ./build-all.sh
-
-      - name: Compile
-        run: |
-          export PSPDEV=/usr/local/pspdev
-          export PATH=$PSPDEV/bin:$PATH
-
-          mkdir build
-          cd build
-
-          cmake ..
-          make -j2
-
-      - name: Upload files
-        uses: actions/upload-artifact@v4
-        with:
-          name: PSP-Game
-          path: |
-            build/**/*.PBP
-            build/**/*.ELF
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+  - name: Install dependencies
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y \
+        git cmake make build-essential \
+        autoconf automake bison flex \
+        libtool pkg-config gcc g++ \
+        texinfo wget
+  - name: Install PSPDEV
+    run: |
+      git clone https://github.com/pspdev/pspdev.git
+      cd pspdev
+      ./prepare.sh
+      sudo ./build-all.sh
+  - name: Verify PSPDEV
+    run: |
+      echo "PSPDEV=$PSPDEV"
+      ls -la "$PSPDEV"
+      which psp-gcc
+      psp-gcc --version
+  - name: Compile
+    run: |
+      mkdir -p build
+      cd build
+      cmake ..
+      make -j2
+  - name: Upload files
+    uses: actions/upload-artifact@v4
+    with:
+      name: PSP-Game
+      path: |
+        build/**/*.PBP
+        build/**/*.ELF
+      if-no-files-found: error
